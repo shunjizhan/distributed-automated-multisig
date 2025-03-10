@@ -9,24 +9,14 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, formatEther, http, publicActions } from 'viem';
 import { getBalance } from 'viem/actions';
 
+import { accounts, client, privateKeys } from '../src/utils';
+
 dotenv.config();
 
 async function main() {
-    const privateKeys = process.env.KEYS?.split(',') || [];
-    if (privateKeys.length !== 3) {
-      throw new Error('Expected 3 private keys in the KEYS environment variable');
-    }
-
-    const [account1, account2, account3] = privateKeys.map(key => privateKeyToAccount(`0x${key}`));
-    const owners = [account1.address, account2.address, account3.address];
-    const threshold = 2;
-
-    const client = createWalletClient({
-      chain: sepolia,
-      transport: http(),
-      account: account1,
-    }).extend(publicActions);
-
+    const [account1, account2, account3] = accounts;
+    const owners = accounts.map(acc => acc.address);
+    const threshold = 3;
 
     const balance = await getBalance(client, {
       address: account1.address,
@@ -70,7 +60,7 @@ async function main() {
       retryCount: 999,
     })
 
-    console.log(`transactionReceipt: ${transactionReceipt}`);
+    console.log(`transactionReceipt: ${JSON.stringify(transactionReceipt)}`);
 }
 
 main().catch(console.error);

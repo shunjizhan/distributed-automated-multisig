@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "create-safe": "ts-node src/scripts/1-create-safe.ts",
-    "exec-tx": "ts-node src/scripts/2-exec-tx.ts"
+    "create-safe": "ts-node scripts/1-create-safe.ts",
+    "exec-tx": "ts-node scripts/2-exec-tx.ts"
   },
   "license": "MIT",
   "dependencies": {

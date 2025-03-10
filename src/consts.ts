@@ -1,0 +1,2 @@
+export const SAFE_ADDR = '0xafd20A968DB9E8f60Cb0DDb74fbD0a1fd797D01c';
+
