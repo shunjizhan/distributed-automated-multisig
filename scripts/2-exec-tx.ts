@@ -49,7 +49,7 @@ async function main() {
   console.log({ txHash })
 
   console.log('waiting for confirmation...')
-  const receipt = await client.waitForTransactionReceipt({ hash: txHash as `0x${string}`, retryCount: 999 })
+  const receipt = await client.waitForTransactionReceipt({ hash: txHash as `0x${string}` })
   console.log({ receipt })
 }
 

@@ -4,13 +4,14 @@ import SafeApiKit from '@safe-global/api-kit';
 import assert from 'assert';
 import { sepolia } from 'viem/chains';
 
+import { privateKeys } from './wallet';
 import { SAFE_ADDR } from '../consts';
 
 export const apiKit = new SafeApiKit({
   chainId: 11155111n
 })
 
-export const getSafeKits = async (privateKeys: string[]) => {
+export const getSafeKits = async () => {
   return await Promise.all(privateKeys.map(key => Safe.init({
     provider: sepolia.rpcUrls.default.http[0],
     signer: key,
@@ -23,7 +24,7 @@ export const proposeTx = async (safeKit: Safe, tx: MetaTransactionData) => {
     transactions: [tx]
   })
 
-  console.log({ safeTransaction })
+  // console.log({ safeTransaction })
 
   // Deterministic hash based on transaction parameters
   const safeTxHash = await safeKit.getTransactionHash(safeTransaction)
@@ -38,6 +39,8 @@ export const proposeTx = async (safeKit: Safe, tx: MetaTransactionData) => {
     senderAddress: senderSignature.signer,
     senderSignature: senderSignature.data
   })
+
+  return { safeTxHash }
 }
 
 export const execTx = async (safeKit: Safe, safeTxHash: string) => {
