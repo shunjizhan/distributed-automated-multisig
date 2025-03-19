@@ -1,16 +1,15 @@
-import express from 'express';
+import { SafeMultisigTransactionResponse } from '@safe-global/types-kit';
 import cors from 'cors';
-import minimist from 'minimist';
+import express from 'express';
+
+import { KEY_INDEX, PORT, SAFE_ADDR } from '../../consts';
 import {
-  confirmTx,
-  apiKit,
   accounts,
-  validateTx,
+  apiKit,
+  confirmTx,
   getSafeKits,
-  privateKeys
+  validateTx
 } from '../../utils';
-import { SAFE_ADDR } from '../../consts';
-import { SafeMultisigTransactionResponse, SafeTransaction } from '@safe-global/types-kit';
 
 export interface TransactionData {
   to: string;
@@ -19,17 +18,12 @@ export interface TransactionData {
   operation: number;
 }
 
-// Parse command line arguments
-const argv = minimist(process.argv.slice(2));
-const PORT = argv.port || 2222;
-const KEY_INDEX = argv.keyIndex || 1;
-
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 console.log(`Starting signer service with key index ${KEY_INDEX} on port ${PORT}`);
-console.log(`Signer address: ${accounts[KEY_INDEX].address}`);
+console.log(`Signer address: ${accounts[KEY_INDEX].address} on evm`);
 
 const signingTxs = new Set<string>();
 const checkAndSignPendingTxs = async (tx: SafeMultisigTransactionResponse) => {
