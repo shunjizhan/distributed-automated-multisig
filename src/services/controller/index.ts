@@ -7,6 +7,9 @@ import {
   apiKit,
   getSafeKits,
   client,
+  getPendingOrders,
+  createTonOrder,
+  jsonParse,
 } from '../../utils';
 import { MANAGER_PORT, SAFE_ADDR } from '../../consts';
 
@@ -102,6 +105,16 @@ app.post('/propose', async (req: express.Request, res: express.Response) => {
       message: error instanceof Error ? error.message : String(error)
     });
   }
+});
+
+app.post('/create-order', async (req, res) => {
+  const { to, value } = req.body;
+  const orderData = await createTonOrder({ to, value });
+
+  res.json({
+    success: true,
+    orderData: jsonParse(orderData)
+  });
 });
 
 app.get('/status', async (req, res) => {

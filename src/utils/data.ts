@@ -1,5 +1,8 @@
-import { Address, Dictionary } from '@ton/core';
+import { address, Address, Dictionary } from '@ton/core';
 import { TonClient } from '@ton/ton';
+
+import { Multisig, MultisigOrder } from './wrappers';
+import { runWithRetry } from './runner';
 
 export type MultisigData = {
   nextOrderSeqno: string;
@@ -8,57 +11,101 @@ export type MultisigData = {
   proposers: string[];
 };
 
-export async function getMultisigData(client: TonClient, address: Address): Promise<MultisigData> {
-  const result = await client.runMethod(address, 'get_multisig_data');
-  const stack = result.stack;
+export async function getMultisigData(
+  client: TonClient,
+  multisigAddr: Address
+): Promise<MultisigData> {
+  const multisig = new Multisig(multisigAddr);
+  const openedMultisig = client.open(multisig);
+  const data = await runWithRetry(() => openedMultisig.getMultisigData());
 
-  // Parse results from the stack
-  const nextOrderSeqno = stack.readBigNumber().toString();
-  const threshold = stack.readBigNumber().toString();
-  console.log({ nextOrderSeqno, threshold })
-
-  // Extract signers
-  const signersCell = stack.readCell();
-  const signers: string[] = [];
-  try {
-    const signersDict = Dictionary.loadDirect(
-      Dictionary.Keys.Uint(8),
-      Dictionary.Values.Address(),
-      signersCell
-    );
-
-    for (const [_, value] of signersDict) {
-      signers.push(value.toString());
-    }
-  } catch (error) {
-    console.error('Error parsing signers dictionary:', error);
-  }
-  console.log({ signers })
-
-  // Extract proposers
-  const proposersCell = stack.readCellOpt();
-  const proposers: string[] = [];
-  if (proposersCell) {
-    try {
-      const proposersDict = Dictionary.loadDirect(
-        Dictionary.Keys.Uint(8),
-        Dictionary.Values.Address(),
-        proposersCell
-      );
-
-      for (const [_, value] of proposersDict) {
-        proposers.push(value.toString());
-      }
-    } catch (error) {
-      console.error('Error parsing proposers dictionary:', error);
-    }
-  }
-
-  // Return the data
   return {
-    nextOrderSeqno,
-    threshold,
-    signers,
-    proposers
+    nextOrderSeqno: data.nextOrderSeqno.toString(),
+    threshold: data.threshold.toString(),
+    signers: data.signers.map(signer => signer.toString()),
+    proposers: data.proposers.map(proposer => proposer.toString()),
   };
 };
+
+export async function getOrderAddress(
+  client: TonClient,
+  multisigAddr: Address,
+  orderSeqno: bigint,
+): Promise<string> {
+  const multisig = new Multisig(multisigAddr);
+  const openedMultisig = client.open(multisig);
+  const orderAddr = await runWithRetry(() => openedMultisig.getOrderAddress(orderSeqno));
+
+  return orderAddr.toString();
+}
+
+export const getOrderData = async (client: TonClient, orderAddr: Address) => {
+  const order = new MultisigOrder(orderAddr);
+  const openedOrder = client.open(order);
+  const data = await runWithRetry(() => openedOrder.getOrderData());
+
+  return {
+    inited: data.inited,
+    multisig: data.multisig.toString(),
+    orderSeqno: data.order_seqno,
+    threshold: data.threshold,
+    executed: data.executed,
+    signers: data.signers.map(signer => signer.toString()),
+    approvals: data.approvals,
+    approvalsNum: data.approvals_num,
+    expirationDate: data.expiration_date?.toString(),
+    order: data.order?.toString(),
+  }
+}
+
+const executedOrderSeqNumbers = new Set<number>();
+export const getPendingOrders = async (
+  client: TonClient,
+  multisigAddr: string,
+  signerAddr: string
+) => {
+  const multisig = client.open(new Multisig(Address.parse(multisigAddr)));
+  const { nextOrderSeqno } = await runWithRetry(() => multisig.getMultisigData());
+
+  const checkingSeqNumbers = Array.from({ length: Number(nextOrderSeqno) }, (_, i) => i)
+    .filter(i => !executedOrderSeqNumbers.has(i));
+
+  const orderConfigs = await Promise.all(checkingSeqNumbers.map(
+    async (i) => {
+      const orderAddr = await runWithRetry(() => multisig.getOrderAddress(BigInt(i)));
+      return {
+        multisig: multisig.address,
+        orderSeqno: Number(i),
+        orderAddr: orderAddr,
+      };
+    }
+  ));
+
+  const orderDetails = await Promise.all(orderConfigs.map(
+    async orderConfig => {
+      const data = await runWithRetry(() => getOrderData(client, orderConfig.orderAddr))
+      return {
+        ...data,
+        ...orderConfig,
+      }
+    }
+  ));
+
+  const pendingOrders = orderDetails.filter(({ threshold, approvals, signers, inited }) =>
+      inited
+      && approvals.filter(x => x === true).length < threshold!
+      && signers.some(s => Address.parse(s).equals(Address.parse(signerAddr)))
+      && !approvals[signers.findIndex(s => Address.parse(s).equals(Address.parse(signerAddr)))]
+  );
+
+  const pendingSeqNumbers = pendingOrders.map(({ orderSeqno }) => orderSeqno);
+
+  // record executed sequence numbers
+  const _executedOrderSeqNumbers = checkingSeqNumbers.filter(
+    i => !pendingSeqNumbers.includes(i)
+  );
+  _executedOrderSeqNumbers.forEach(i => executedOrderSeqNumbers.add(i));
+
+  console.log(`found ${pendingOrders.length} pending orders`)
+  return pendingOrders;
+}

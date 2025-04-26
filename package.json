@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start:controller": "ts-node src/services/controller/index.ts",
-    "start:signer1": "ts-node src/services/signer/index.ts --port=2222 --keyIndex=1",
-    "start:signer2": "ts-node src/services/signer/index.ts --port=3333 --keyIndex=2",
+    "start:controller": "ts-node-dev src/services/controller/index.ts --port=1111 --keyIndex=0",
+    "start:signer1": "ts-node-dev src/services/signer/index.ts --port=2222 --keyIndex=1",
+    "start:signer2": "ts-node-dev src/services/signer/index.ts --port=3333 --keyIndex=2",
     "start:data": "ts-node-dev src/services/data/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -22,6 +22,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "http-proxy-agent": "^7.0.2",
     "minimist": "^1.2.8"
   },
   "devDependencies": {

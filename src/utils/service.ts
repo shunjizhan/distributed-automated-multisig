@@ -1,12 +1,26 @@
+import { KEY_INDEX } from "../consts";
+
 export const validateTx = async (safeTxHash: string) => {
   console.log(`Validating transaction ${safeTxHash}...`);
 
-  // random sleep 20 - 60 seconds with countdown with 1 second intervals
-  const countdown = Math.floor(Math.random() * 40000) + 40000;
+  const countdown = KEY_INDEX * 30 * 1000;
   console.log(`Validating ... ${countdown / 1000}s remaining`);
-  for (let i = countdown; i >= 0; i -= 2000) {
-    console.log(`Validating ... ${i / 2000}s remaining`);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+  for (let i = countdown; i >= 0; i -= 1000) {
+    console.log(`${i / 1000}s remaining`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  return true;
+};
+
+export const validateTonTx = async (orderData: string) => {
+  console.log(`Validating transaction ${orderData}...`);
+
+  const countdown = KEY_INDEX * 30 * 1000;
+  console.log(`Validating ... ${countdown / 1000}s remaining`);
+  for (let i = countdown; i >= 0; i -= 1000) {
+    console.log(`${i / 1000}s remaining`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   return true;
